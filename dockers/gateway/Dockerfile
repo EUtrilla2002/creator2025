@@ -73,10 +73,12 @@ ARG TARGET_BOARD=esp32c3 //Default value provided
 
 RUN apt-get remove -y python3-blinker
 # Debug options
-RUN python3.9 -m pip install --upgrade pip setuptools wheel
+RUN python3.9 -m pip install --upgrade --ignore-installed pip setuptools wheel
 
-RUN python3.9 -m pip install --no-cache-dir --force-reinstall --upgrade \
+
+RUN python3.9 -m pip install --no-cache-dir --ignore-installed --force-reinstall --upgrade \
     cffi==1.15.1 cryptography==41.0.4
+
 
 RUN python3.9 -m pip install --no-cache-dir --force-reinstall \
     eventlet==0.33.3 gdbgui==0.15.2.0 flask flask_cors flask-socketio   
