@@ -276,9 +276,10 @@ def do_monitor_request(request):
 
     # Kill debug process
     if running_in_docker() and openocd_alive('host.docker.internal', 4444):
-       logging.error("Stop openocd in your local machine\n")
-       req_data['status'] += "Stop openocd in your local machine\n"
-       return jsonify(req_data)
+      if not openocd_shutdown('host.docker.internal', 4444):
+        req_data['status'] += "Stop openocd in your local machine\n"
+        return jsonify(req_data)
+
 
     if 'openocd' in process_holder:
       logging.debug('Killing OpenOCD')
@@ -315,10 +316,11 @@ def do_monitor_request(request):
 # (4.1) Physical connections check   
 def check_uart_connection(board):
     """ Checks UART devices """
+    # LINUX
     if board.startswith('/dev/ttyUSB'):
       devices = glob.glob('/dev/ttyUSB*')
       logging.debug(f"Found devices: {devices}")
-      if "/dev/ttyUSB0" in devices:
+      if board in devices:
           logging.info("Found UART.")
           return 0
       elif devices:
@@ -327,6 +329,7 @@ def check_uart_connection(board):
       else:
           logging.error("NO UART port found.")
           return 1
+    # WINDOWS  
     elif board.startswith('rfc2217'):
       try:
           ser = serial.serial_for_url(board, timeout=1)
@@ -335,7 +338,20 @@ def check_uart_connection(board):
           return 0
       except serial.SerialException as e:
           logging.error(f"NO RFC2217 UART port found: {e}")
-          return 1  
+          return 1 
+    # MAC
+    elif board.startswith('/dev/cu.usb'):
+      devices = glob.glob('/dev/cu.usb*')
+      logging.debug(f"Found devices: {devices}")
+      if board in devices:
+          logging.info("Found UART.")
+          return 0
+      elif devices:
+          logging.error("Other UART devices found (Is the name OK?).")
+          return 0
+      else:
+          logging.error("NO UART port found.")
+          return 1   
     
 def check_jtag_connection():
     """ Checks JTAG devices """
@@ -509,7 +525,7 @@ def start_gdbgui(req_data):
     req_data['status'] += f"Finished debug session: {e}\n"
     return jsonify(req_data)
           
-# (4.5) Debug in docker
+# (4.5) Check environment (docker or native)
 def running_in_docker():
     try:
         with open('/proc/1/cgroup', 'rt') as f:
@@ -527,7 +543,7 @@ def running_in_docker():
 
     return False
 
-# (4.6) Check if openocd is alive in host
+# (4.6) Remote debug
 def openocd_alive(host='localhost', port=4444, timeout=1):
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -538,7 +554,7 @@ def openocd_alive(host='localhost', port=4444, timeout=1):
         print(f"Error inesperado: {e}")
         return False
     
-# (4.7) Open gdbgui in docker 
+
 def start_gdbgui_remote(req_data):
     target_device      = req_data['target_port']
     route = os.path.join(BUILD_PATH, 'gdbinit')
@@ -572,7 +588,7 @@ def start_gdbgui_remote(req_data):
             stderr=sys.stderr,
             text=True
         )
-        logging.debug("gdbgui started, PID: %d", process_holder['gdbgui'].pid)
+        logging.info("gdbgui started, PID: %d", process_holder['gdbgui'].pid)
 
         # Ejecutar idf.py monitor y esperar a que termine
         idf_proc = subprocess.run(
@@ -599,7 +615,18 @@ def start_gdbgui_remote(req_data):
 
     req_data['status'] += "Debug session finished.\n"
     return jsonify(req_data)
-       
+
+
+def openocd_shutdown(host='localhost', port=4444):
+    try:
+        with socket.create_connection((host, port), timeout=1) as s:
+            s.sendall(b"shutdown\n")
+        return True
+
+    except Exception as e:
+        logging.error(f"OpenOCD not closed correctly: {e}")
+        return False
+
 
    
 # (4.7) Main debug function
