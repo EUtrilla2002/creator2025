@@ -1,0 +1,64 @@
+Open On-Chip Debugger v0.12.0-esp32-20241016 (2024-10-16-14:17)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : only one transport option; autoselecting 'jtag'
+Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+Info : esp_usb_jtag: serial (58:8C:81:42:05:A4)
+Info : esp_usb_jtag: Device found. Base speed 24000KHz, div range 1 to 255
+Info : clock speed 24000 kHz
+Info : JTAG tap: esp32c6.tap0 tap/device found: 0x0000dc25 (mfg: 0x612 (Espressif Systems), part: 0x000d, ver: 0x0)
+Info : [esp32c6] datacount=2 progbufsize=16
+Info : [esp32c6] Examined RISC-V core; found 2 harts
+Info : [esp32c6]  XLEN=32, misa=0x40903105
+Info : [esp32c6] Examination succeed
+Info : [esp32c6] starting gdb server on 3333
+Info : Listening on port 3333 for gdb connections
+Info : JTAG tap: esp32c6.tap0 tap/device found: 0x0000dc25 (mfg: 0x612 (Espressif Systems), part: 0x000d, ver: 0x0)
+Info : [esp32c6] Reset cause (24) - (JTAG CPU reset)
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Error: libusb_open() failed with LIBUSB_ERROR_NO_DEVICE
+Error: esp_usb_jtag: device not found!
+Error: esp_usb_jtag: failed to revive USB device!
+Error: missing data from bitq interface
+Error: dmi_scan failed jtag scan
+Error: libusb_bulk_write error: LIBUSB_ERROR_NO_DEVICE
+Info : esp_usb_jtag: serial (58:8C:81:42:05:A4)
+Info : esp_usb_jtag: Device found. Base speed 24000KHz, div range 1 to 255
+Error: missing data from bitq interface
+Error: failed jtag scan: -104
+Error: [esp32c6] Failed DMI read at 0x11; status=2
+Error: [esp32c6] polling failed!
+Info : [esp32c6] Hart unexpectedly reset!
+Info : [esp32c6] Reset cause (1) - (Chip reset)
+Info : accepting 'gdb' connection on tcp/3333
+Info : [esp32c6] Target halted, PC=0x40803978, debug_reason=00000000
+Warn : No symbols for FreeRTOS!
+Info : [esp32c6] Found 4 triggers
+Info : Flash mapping 0: 0x10020 -> 0x42018020, 38 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 76 KB
+Info : Auto-detected flash bank 'esp32c6.flash' size 8192 KB
+Info : Using flash bank 'esp32c6.flash' size 8192 KB
+Info : Flash mapping 0: 0x10020 -> 0x42018020, 38 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 76 KB
+Info : Using flash bank 'esp32c6.irom' size 80 KB
+Info : Flash mapping 0: 0x10020 -> 0x42018020, 38 KB
+Info : Flash mapping 1: 0x20020 -> 0x42000020, 76 KB
+Info : Using flash bank 'esp32c6.drom' size 40 KB
+Info : Detected FreeRTOS version: (10.5.1)
+Info : JTAG tap: esp32c6.tap0 tap/device found: 0x0000dc25 (mfg: 0x612 (Espressif Systems), part: 0x000d, ver: 0x0)
+Info : [esp32c6] Reset cause (24) - (JTAG CPU reset)
+Info : Detected FreeRTOS version: (10.5.1)
+Info : [esp32c6] Target halted, PC=0x4200CD74, debug_reason=00000001
+Info : [esp32c6] Target halted, PC=0x4200CD78, debug_reason=00000004
+Info : [esp32c6] Target halted, PC=0x4200CD7C, debug_reason=00000004
+Info : [esp32c6] Target halted, PC=0x4200CD7E, debug_reason=00000004
+Info : [esp32c6] Target halted, PC=0x4200CD82, debug_reason=00000001
+Info : [esp32c6] Halt cause (11) - (ECALL from M mode)
+Info : [esp32c6] Target halted, PC=0x4200CD86, debug_reason=00000004
+Info : [esp32c6] Halt cause (11) - (ECALL from M mode)
+Info : [esp32c6] Target halted, PC=0x4200CD8A, debug_reason=00000004
+Info : [esp32c6] Halt cause (11) - (ECALL from M mode)

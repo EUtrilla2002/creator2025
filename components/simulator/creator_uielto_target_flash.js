@@ -1,4 +1,3 @@
-
 /*
  *  Copyright 2018-2025 Felix Garcia Carballeira, Diego Camarmas Alonso, Alejandro Calderon Mateos
  *
@@ -31,6 +30,7 @@
                       result_email:   { type: String, required: true },
                       target_board:   { type: String, required: true },
                       target_port:    { type: String, required: true },
+                      target_location: { type: String, required: true },
                       flash_url:      { type: String, required: true }
                     },
 
@@ -75,6 +75,12 @@
                                         //{ text: 'ESP32-S3 (MIPS-32)',      value: 'esp32s3' },
                                         ],
 
+                        sbc_target_boards = [
+                                          { text: 'Please select an option', value: "", disabled: true },
+                                          { text: 'SBC (RISC-V)',            value: 'sbcriscv' },
+                                        ],                
+
+
                         /*
                         target_ports  = { Win: 'rfc2217://host.docker.internal:4000?ign_set_control', Mac: '/dev/cu.usbserial-210', Linux: '/dev/ttyUSB0' },
 
@@ -82,7 +88,7 @@
                         target_port   = this.get_target_port(),
                         flash_url     = "http://localhost:8080",
                         */
-
+                        selectedOption: 'esp32',
 
                         flashing  = false,
                         running   = false,
@@ -92,14 +98,36 @@
                         eraseflash = false,
                         showPopup: false,
                         pendingAction: null,
+                        activeTab: false,
                       }
                     },
+
+        watch: {
+          selectedOption(newVal, oldVal) {
+            this.target_board = ''; 
+            this.activeTab = false; 
+          },
+          target_board(newVal, oldVal) {
+            if (!newVal) {
+              this.activeTab = false;
+            } else {
+              this.activeTab = true;
+            }
+          },
+        },
 
         methods:    {
 
                       //
                       //Remote Device
                       //
+
+                        ShowEspressif() {
+                          return this.selectedOption === 'esp32';
+                        },
+                        ShowSBC() {
+                          return this.selectedOption === 'sbc';
+                        },
 
                       get_boards()
                       {
@@ -132,11 +160,23 @@
                         }
                       },
 
+                      onTabChange() {
+                          if (this.target_board.startsWith('sbc')) {
+                              this.changeTargetPort('ubuntu@127.0.0.1');
+                            }
+                          else{
+                            this.changeTargetPort(window.app.target_ports[window.app.os])
+                          }  
+                        },
+                      changeTargetPort(newPort) {
+                          this.target_port = newPort;
+                        },
+
                       do_enqueue ()
                       {
                         this.save();
 
-                        if(instructions.length == 0)
+                        if (instructions.length == 0)
                         {
                           show_notification("Compile a program first", 'danger');
                           return;
@@ -247,7 +287,7 @@
                       {
                         var link = document.createElement("a");
                         link.download = "driver.zip";
-                        link.href = (window.location.href.split('?')[0]).split('#')[0] + "/gateway/" + this.target_board + ".zip";
+                        link.href = (window.location.href.split('?')[0]).split('#')[0] + "/gateway/" + this.selectedOption + ".zip";
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
@@ -272,6 +312,7 @@
                         var farg =  {
                                       target_board: this.target_board,
                                       target_port:  this.target_port,
+                                      target_location:  this.target_location,
                                       assembly:     code_assembly,
                                     } ;
 
@@ -280,13 +321,25 @@
                                                                                                       this_env.flashing = false;
                                                                                                       console.log("Message:"+ JSON.stringify(data, null, 2));
                                                                                                      if (JSON.stringify(data, null, 2).includes('TypeError: NetworkError')) {
-                                                                                                        show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, heck if port 8080 works fine and connect your board first\n', 'danger');
+                                                                                                        show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, check if port 8080 works fine and connect your board first\n', 'danger');
                                                                                                       }
                                                                                                       if (JSON.stringify(data, null, 2).includes('Flash completed successfully')) {
                                                                                                         show_notification('Flashing program success.', 'success');
                                                                                                       }
-                                                                                                      if (JSON.stringify(data, null, 2).includes('No UART port found')) {
-                                                                                                        show_notification('Error flashing: Not found UART port', 'danger');
+                                                                                                      if (JSON.stringify(data, null, 2).includes('Target location is blank')) {
+                                                                                                        show_notification('Error flashing: Blank target location', 'danger');
+                                                                                                      }
+                                                                                                      if (JSON.stringify(data, null, 2).includes('Target port is blank')) {
+                                                                                                        show_notification('Error flashing: Blank target port', 'danger');
+                                                                                                      }
+                                                                                                      if (JSON.stringify(data, null, 2).includes('Target port is blank')) {
+                                                                                                        show_notification('Error flashing: Blank target port', 'danger');
+                                                                                                      }
+                                                                                                      if (JSON.stringify(data, null, 2).includes('Unreachable host')) {
+                                                                                                        show_notification('Error flashing: Unreachable host', 'danger');
+                                                                                                      }
+                                                                                                      if (JSON.stringify(data, null, 2).includes('Problem with sending code to the SBC')) {
+                                                                                                        show_notification('Error flashing: Check if the target location exists in your SBC or if the target port user exists ', 'danger');
                                                                                                       }
                                                                                                     } ) ;
 
@@ -303,6 +356,7 @@
                         var farg =  {
                                       target_board: this.target_board,
                                       target_port:  this.target_port,
+                                      target_location:  this.target_location,
                                       assembly:     code_assembly,
                                     } ;
 
@@ -312,11 +366,23 @@
                                                                                                           //show_notification(data, 'danger') ;
                                                                                                           console.log(JSON.stringify(data, null, 2));
                                                                                                           if (JSON.stringify(data, null, 2).includes('TypeError: NetworkError')) {
-                                                                                                            show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, heck if port 8080 works fine and connect your board first\n', 'danger');
+                                                                                                            show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, check if port 8080 works fine and connect your board first\n', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Target location is blank')) {
+                                                                                                            show_notification('Error monitoring: Blank target location', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Target port is blank')) {
+                                                                                                            show_notification('Error monitoring: Blank target port', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Target port is blank')) {
+                                                                                                            show_notification('Error monitoring: Blank target port', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Unreachable host')) {
+                                                                                                            show_notification('Error monitoring: Unreachable host', 'danger');
                                                                                                           }
                                                                                                           if (JSON.stringify(data, null, 2).includes('Process stopped')) {
-                                                                                                            show_notification('Process stopped.', 'success');
-                                                                                                          }
+                                                                                                              show_notification('Process stopped.', 'success');
+                                                                                                            }
                                                                                                         } ) ;
 
                         //Google Analytics
@@ -335,6 +401,7 @@
                         var farg =  {
                                       target_board: this.target_board,
                                       target_port:  this.target_port,
+                                      target_location:  this.target_location,
                                       assembly:     code_assembly,
                                     } ;
 
@@ -343,13 +410,25 @@
                                                                                                           this_env.running = false;
                                                                                                           console.log(JSON.stringify(data, null, 2)); 
                                                                                                           if (JSON.stringify(data, null, 2).includes('TypeError: NetworkError')) {
-                                                                                                          show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, heck if port 8080 works fine and connect your board first\n', 'danger');
+                                                                                                          show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, check if port 8080 works fine and connect your board first\n', 'danger');
                                                                                                           }
                                                                                                           if (JSON.stringify(data, null, 2).includes('No UART port found')) {
                                                                                                             show_notification('Error: Not found UART port', 'danger');
                                                                                                           }
                                                                                                           if (JSON.stringify(data, null, 2).includes('No ELF file found')) {
                                                                                                             show_notification('Error: Built proyect not found', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Target location is blank')) {
+                                                                                                          show_notification('Error flashing: Blank target location', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Target port is blank')) {
+                                                                                                            show_notification('Error flashing: Blank target port', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Target port is blank')) {
+                                                                                                            show_notification('Error flashing: Blank target port', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Unreachable host')) {
+                                                                                                            show_notification('Error flashing: Unreachable host', 'danger');
                                                                                                           }
                                                                                                         } ) ;
 
@@ -366,6 +445,7 @@
                         var farg =  {
                                       target_board: this.target_board,
                                       target_port:  this.target_port,
+                                      target_location:  this.target_location,
                                       assembly:     code_assembly,
                                     } ;
 
@@ -373,17 +453,21 @@
                       gateway_remote_monitor(this.flash_url + "/debug", farg).then( function(data)  { 
                                                                                                       this_env.debugging = false;
                                                                                                       if (JSON.stringify(data, null, 2).includes('TypeError: NetworkError')) {
-                                                                                                          show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, heck if port 8080 works fine and connect your board first\n', 'danger');
+                                                                                                          show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, check if port 8080 works fine and connect your board first\n', 'danger');
                                                                                                       }                                                
                                                                                                       if (JSON.stringify(data, null, 2).includes('No ELF file found in build directory')) {
                                                                                                         show_notification('Error: Not found proyect to debug', 'danger');
                                                                                                       }
-                                                                                                      if (JSON.stringify(data, null, 2).includes('No JTAG found')) {
-                                                                                                        show_notification('Error: JTAG no connected. Check wire installment', 'danger');
+                                                                                                      if (JSON.stringify(data, null, 2).includes('Target location is blank')) {
+                                                                                                        show_notification('Error debugging: Blank target location', 'danger');
                                                                                                       }
-                                                                                                      if (JSON.stringify(data, null, 2).includes('No UART found')) {
-                                                                                                        show_notification('Error: UART no connected. Check wire installment', 'danger');
+                                                                                                      if (JSON.stringify(data, null, 2).includes('Target port is blank')) {
+                                                                                                        show_notification('Error debugging: Blank target port', 'danger');
                                                                                                       }
+                                                                                                      if (JSON.stringify(data, null, 2).includes('Unreachable host')) {
+                                                                                                        show_notification('Error debugging: Unreachable host', 'danger');
+                                                                                                      }
+
                                                                                                         } ) ;
 
                         //Google Analytics
@@ -416,6 +500,7 @@
                         var farg =  {
                                       target_board: this.target_board,
                                       target_port:  this.target_port,
+                                      target_location:  this.target_location,
                                       assembly:     code_assembly,
                                     } ;
 
@@ -423,7 +508,7 @@
                         gateway_remote_monitor(this.flash_url + "/fullclean", farg).then( function(data)  { 
                                                                                                           this_env.fullclean = false;
                                                                                                           if (JSON.stringify(data, null, 2).includes('TypeError: NetworkError')) {
-                                                                                                          show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, heck if port 8080 works fine and connect your board first\n', 'danger');
+                                                                                                          show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, check if port 8080 works fine and connect your board first\n', 'danger');
                                                                                                           }
                                                                                                           console.log(JSON.stringify(data, null, 2));
                                                                                                           if (JSON.stringify(data, null, 2).includes('Full clean done.')) {
@@ -447,6 +532,7 @@
                         var farg =  {
                                       target_board: this.target_board,
                                       target_port:  this.target_port,
+                                      target_location:  this.target_location,
                                       assembly:     code_assembly,
                                     } ;
 
@@ -456,10 +542,19 @@
                                                                                                           //show_notification(data, 'danger') ;
                                                                                                           console.log(JSON.stringify(data, null, 2));
                                                                                                           if (JSON.stringify(data, null, 2).includes('TypeError: NetworkError')) {
-                                                                                                          show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, heck if port 8080 works fine and connect your board first\n', 'danger');
+                                                                                                          show_notification('Gateway not available at the moment. Please, execute python3 gateway.py, check if port 8080 works fine and connect your board first\n', 'danger');
                                                                                                           }
                                                                                                           if (JSON.stringify(data, null, 2).includes('Erase flash done')) {
                                                                                                             show_notification('Erase flash done. Please, unplug and plug the cable(s) again', 'success');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Target location is blank')) {
+                                                                                                            show_notification('Error erase-flashing: Blank target location', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Target port is blank')) {
+                                                                                                            show_notification('Error erase-flashing: Blank target port', 'danger');
+                                                                                                          }
+                                                                                                          if (JSON.stringify(data, null, 2).includes('Unreachable host')) {
+                                                                                                            show_notification('Error erase-flashing: Unreachable host', 'danger');
                                                                                                           }
                                                                                                           if (JSON.stringify(data, null, 2).includes('Could not open /dev/ttyUSB0, the port is busy or doesn\'t exist')) {
                                                                                                             show_notification('Error erasing flash: Hint: Check if the port is correct and ESP connected', 'danger');
@@ -488,24 +583,40 @@
                     '          hide-footer' +
                     '          @hidden="save">' +
                     ' ' +
+                    ' <b-tabs title="Devices">' +
+                    '<div class="d-flex flex-column align-items-center my-4">' +
+                    '  <span style="margin-bottom: 10px; font-weight: bold;">Select Device Type:</span>' +
+                    '  <div class="d-flex">' +
+                    '    <div class="form-check mx-2">' +
+                    '      <input class="form-check-input" type="radio" id="radioEspressif" value="esp32" v-model="selectedOption">' +
+                    '      <label class="form-check-label" for="radioEspressif">Espressif</label>' +
+                    '    </div>' +
+                    '    <div class="form-check mx-2">' +
+                    '      <input class="form-check-input" type="radio" id="radioSBC" value="sbc" v-model="selectedOption">' +
+                    '      <label class="form-check-label" for="radioSBC">SBC</label>' +
+                    '    </div>' +
+                    '  </div>' +
+                    '</div>' +
+
                     '   <b-tabs content-class="mt-3">' +
-                    '     <b-tab title="Local Device">' +
+                    '     <b-tab title="Local Device" >' +
                     ' ' +
                     '       <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '         <b-row cols="1" align-h="center">' +
                     '           <b-col class="pt-2">' +
                     '             <label for="range-6">(1) Select Target Board:</label>' +
                     '             <b-form-select v-model="target_board" ' +
-                    '                            :options="target_boards" ' +
+                    '                            :options="selectedOption === \'esp32\' ? target_boards : sbc_target_boards"  ' +
                     '                            size="sm"' +
-                    '                            title="Target board">' +
+                    '                            title="Target board"' +
+                    '                             @change="onTabChange">'+
                     '             </b-form-select>' +
                     '           </b-col>' +
                     '         </b-row>' +
                     '       </b-container>' +
                     '       <br>' +
                     ' ' +
-                    '       <b-tabs content-class="mt-3" v-if="target_board !=\'\'">' +
+                    '       <b-tabs content-class="mt-3" v-if="target_board !=\'\' && activeTab" >' +
                     '         <b-tab title="Prerequisites">' +
                     ' ' +
                     '           <b-tabs content-class="mt-3">' +
@@ -835,16 +946,33 @@
                     '           <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '             <b-row cols="1" align-h="center">' +
                     '               <b-col class="pt-2">' +
-                    '                 <label for="range-6">(2) Target Port: (please verify the port on your computer)</label>' +
-                    '                 <b-form-input type="text" ' +
+                    '                  <div v-if="target_board == \'sbcriscv\'"> '+
+                    '                   <label for="target-user">(2-1) Target User: (please verify your board user )</label>' +
+                    '                   <b-form-input id="target-port" type="text" ' +
+                    '                               v-model="target_port" ' +
+                    '                               placeholder="Enter target user" ' +
+                    '                               size="sm" ' +
+                    '                               title="Target user">' +
+                    '                   </b-form-input>' +
+                    '                 <br>' +
+                    '                   <label for="target-location">(2-2) Target Location: (please verify the route exists in your board )</label>' +
+                    '                   <b-form-input id="target-location" type="text" ' +
+                    '                               v-model="target_location" ' +
+                    '                               placeholder="Enter target location" ' +
+                    '                               size="sm" ' +
+                    '                               title="Target Location">' +
+                    '                   </b-form-input>' +
+                    '                 </div>'+
+                    '                  <div v-else> '+
+                    '                 <label for="target-port">(2) Target Port: (please verify the port on your computer)</label>' +
+                    '                 <b-form-input id="target-port" type="text" ' +
                     '                               v-model="target_port" ' +
                     '                               placeholder="Enter target port" ' +
                     '                               size="sm" ' +
                     '                               title="Target port">' +
                     '                 </b-form-input>' +
-                    '               </b-col>' +
-                    '             </b-row>' +
-                    '           </b-container>' +
+                    '                  </div>'+
+                    '                 <br>' +
                     ' ' +
                     '           <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '             <b-row cols="1" align-h="center">' +
@@ -896,6 +1024,7 @@
                     '        <b-button variant="secondary" @click="showPopup = false">Cancel</b-button>' +
                     '        <b-button variant="primary" @click="confirmAction">Confirm</b-button>' +
                     '      </template>' +
+                    
                     '    </b-modal>' +
 
                     '  </div>' +
@@ -938,7 +1067,7 @@
                     ' ' +
                     ' ' +
                     ' ' +
-                    '     <b-tab title="Remote Device">' +
+                    '     <b-tab title="Remote Device"v-if="selectedOption === \'esp32\'">' +
                     ' ' +
                     '       <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '         <b-row cols="1" align-h="center">' +
@@ -1026,9 +1155,12 @@
                     '       <br>' +
                     '       For Teachers, how to deploy a remote laboratory <a href="https://github.com/creatorsim/creator/blob/master/dockers/remote_lab/README.md">documentation</a>' +
                     '     </b-tab>' +
+                    // '     </b-tab>' +
                     '   </b-tabs>' +
                     ' ' +
+                    '    </b-tabs>' +
                     ' </b-modal>'
+
   
   }
 
@@ -1214,6 +1346,7 @@
     }
   }
 
+
   async function gateway_remote_monitor ( flash_url, flash_args )
   {
     var fetch_args =  {
@@ -1241,3 +1374,4 @@
       return err.toString() + "\n";
     }
   }
+
