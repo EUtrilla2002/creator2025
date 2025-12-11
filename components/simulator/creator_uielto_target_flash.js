@@ -620,7 +620,7 @@
                     '         <b-tab title="Prerequisites">' +
                     ' ' +
                     '           <b-tabs content-class="mt-3">' +
-                    '             <b-tab title="Docker Windows" active>' +
+                    '             <b-tab title="Docker Windows" active v-if="selectedOption === \'esp32\'">' +
                     '               <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '                 <b-row cols="1" align-h="center">' +
                     '                   <b-col class="pt-2">' +
@@ -739,7 +739,7 @@
                     '               </b-container>' +
                     '             </b-tab>' +
                     ' ' +
-                    '             <b-tab title="Docker Linux/MacOS">' +
+                    '             <b-tab title="Docker Linux/MacOS" v-if="selectedOption === \'esp32\'">' +
                     '               <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '                 <b-row cols="1" align-h="center">' +
                     '                   <b-col class="pt-2">' +
@@ -809,7 +809,137 @@
                     '               </b-container>' +
                     '             </b-tab>' +
                     ' ' +
-                    '             <b-tab title="Native">' +
+                    // SBC Linux Prerequisites
+                    '             <b-tab title="Linux/MacOs" v-if="selectedOption === \'sbc\'">' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(2) Setup Ubuntu in the SBC chosen and connect it to Internet:</label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                           <b-card-text style="text-align: left;margin:2%;">' +
+                    '                             <span>Check if your board has canonical Ubuntu support (if not founded in official SBC documentation): <a href="https://canonical-ubuntu-boards.readthedocs-hosted.com/en/latest/how-to/" target="_blank">https://canonical-ubuntu-boards.readthedocs-hosted.com/en/latest/how-to/</a></span>' +
+                    '                           </b-card-text>' +
+                    '                           <b-card-text style="text-align: left;margin:2%;">' +
+                    '                               <span><b>Check the ip of your SBC:</b></span>' +
+                    '                                   <pre style="background-color:#f5f5f5; padding:10px; border-radius:5px; margin-top:5px;">' +
+                                                          'ip a' +
+                    '                                     </pre>' +
+                    '                           </b-card-text>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(3) Create the directory where the project will be saved </label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                           <b-card-text style="text-align: left;margin:2%;">' +
+                    '                               <span><b>Create the directory:</b></span>' +
+                    '                                   <pre style="background-color:#f5f5f5; padding:10px; border-radius:5px; margin-top:5px;">' +
+                                                          'mkdir -p ~/creator' +
+                    '                                     </pre>' +
+                    '                               <span><b>Check if the system allows SSH:</b></span>' +
+                    '                                   <pre style="background-color:#f5f5f5; padding:10px; border-radius:5px; margin-top:5px;">' +
+                                                          'systemctl status ssh' +
+                    '                                   </pre>' +
+                    '                           </b-card-text>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(4) Install GDB UI in SBC </label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                           <b-card-text style="text-align: left;margin:2%;">' +
+                    '                                  <span><b>Create a virtual environment:</b></span>' +
+                    '                                  <pre style="background-color:#f5f5f5; padding:10px; border-radius:5px; margin-top:5px;">' +
+                                                        'sudo apt install python3.12-venv\n' +
+                                                        'python3 -m venv ~/gdbgui-venv\n' +
+                                                        'source ~/gdbgui-venv/bin/activate ' +
+                    '                                  </pre>' +
+                    '                                  <span><b>Install and adapt GDBGUI:</b></span>' +
+                    '                                  <pre style="background-color:#f5f5f5; padding:10px; border-radius:5px; margin-top:5px;">' +
+                                                        'sudo apt install build-essential python3-dev python3-pip python3-setuptools python3-wheel gdb\n' +
+                                                        'pip3 install gdbgui\n' +
+                                                        'sed -i "/extra_files=get_extra_files()/a\        allow_unsafe_werkzeug=True," ~/gdbgui-venv/lib/python3.12/site-packages/gdbgui/server/server.py' +
+                    '                                  </pre>' +
+                    '                           </b-card-text>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(4) Download the driver:</label>' +
+                    '                     <b-button class="btn btn-sm btn-block" variant="outline-primary" @click="download_driver"><span class="fas fa-download"></span> Download Driver</b-button>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(5) Install python3 packages in your computer:</label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                           <b-card-text style="text-align: left;margin:2%;">' +
+                    '                             <code>pip3 install flask flask_cors</code>' +
+                    '                           </b-card-text>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                     '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(6) Run driver:</label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                           <b-card-text style="text-align: justify;margin:2%;">' +
+                    '                             <span><b>Unzip the driver.zip file:</b></span>' +
+                    '                              <pre style="background-color:#f5f5f5; padding:10px; border-radius:5px; margin-top:5px;">' + 
+                                                    'unzip driver.zip\n' +
+                                                    'cd sbc' +
+                    '                               </pre>' +
+                    '                             <span><b>Execute the gateway web service:</b></span>' +
+                    '                             <br>' +
+                    '                             <code>python3 gateway.py</code>' +
+                    '                             <br>' +
+                    '                           </b-card-text>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +   
+                      
+                    '              </b-tab>' +
+                    // Espressif Native Prerequisites
+                    '             <b-tab title="Native" v-if="selectedOption === \'esp32\'">' +
                     '               <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '                 <b-row cols="1" align-h="center">' +
                     '                   <b-col class="pt-2">' +
@@ -827,7 +957,7 @@
                     '                 </b-row>' +
                     '               </b-container>' +
                     ' ' +
-                                        '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '                 <b-row cols="1" align-h="center">' +
                     '                   <b-col class="pt-2">' +
                     '                     <label for="range-6">(!!) (NEW) Install the python version stable for this driver(python 3.9 or 3.10):</label>' +
