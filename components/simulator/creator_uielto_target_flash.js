@@ -819,7 +819,7 @@
                     '                       <b-row no-gutters>' +
                     '                         <b-col md="12">' +
                     '                           <b-card-text style="text-align: left;margin:2%;">' +
-                    '                             <span>Check if your board has canonical Ubuntu support (if not founded in official SBC documentation): <a href="https://canonical-ubuntu-boards.readthedocs-hosted.com/en/latest/how-to/" target="_blank">https://canonical-ubuntu-boards.readthedocs-hosted.com/en/latest/how-to/</a></span>' +
+                    '                             <span><b>Check if your board has canonical Ubuntu support</b> (if not founded in official SBC documentation): <a href="https://canonical-ubuntu-boards.readthedocs-hosted.com/en/latest/how-to/" target="_blank">https://canonical-ubuntu-boards.readthedocs-hosted.com/en/latest/how-to/</a></span>' +
                     '                           </b-card-text>' +
                     '                           <b-card-text style="text-align: left;margin:2%;">' +
                     '                               <span><b>Check the ip of your SBC:</b></span>' +
