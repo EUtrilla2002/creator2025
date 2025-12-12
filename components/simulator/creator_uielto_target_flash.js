@@ -1085,7 +1085,7 @@
                     '           </b-tabs>' +
                     '         </b-tab>' +
                     ' ' +
-                    '             <b-tab title="Debug">' +
+                    '             <b-tab title="Debug" v-if="selectedOption === \'esp32\'">' +
                     '               <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '                 <b-row cols="1" align-h="center">' +
                     '                   <b-col class="pt-2">' +
