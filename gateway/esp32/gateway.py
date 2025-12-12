@@ -30,11 +30,13 @@ from flask_cors import CORS, cross_origin
 import subprocess, os, signal
 import logging
 import serial
+import socket
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 BUILD_PATH = '.' 
 process_holder = {}
+
 
 #### (*) Cleaning functions
 def do_fullclean_request(request):
@@ -81,7 +83,6 @@ def do_stop_monitor_request(request):
     if error == 0:
       req_data['status'] += 'Process stopped\n' 
     
-
   except Exception as e:
     req_data['status'] += str(e) + '\n'
 
@@ -142,6 +143,7 @@ def do_cmd(req_data, cmd_array):
   try:
     result = subprocess.run(cmd_array, capture_output=False, timeout=60)
   except:
+    logging.error("Something failed")
     pass
 
   if result.stdout != None:
@@ -150,7 +152,6 @@ def do_cmd(req_data, cmd_array):
     req_data['error']   = result.returncode
 
   return req_data['error']
-
 
 def do_cmd_output(req_data, cmd_array):
   try:
@@ -274,6 +275,11 @@ def do_monitor_request(request):
     req_data['status'] = ''
 
     # Kill debug process
+    if running_in_docker() and openocd_alive('host.docker.internal', 4444):
+      if not openocd_shutdown('host.docker.internal', 4444):
+        req_data['status'] += "Stop openocd in your local machine\n"
+        return jsonify(req_data)
+
 
     if 'openocd' in process_holder:
       logging.debug('Killing OpenOCD')
@@ -310,10 +316,11 @@ def do_monitor_request(request):
 # (4.1) Physical connections check   
 def check_uart_connection(board):
     """ Checks UART devices """
+    # LINUX
     if board.startswith('/dev/ttyUSB'):
       devices = glob.glob('/dev/ttyUSB*')
       logging.debug(f"Found devices: {devices}")
-      if "/dev/ttyUSB0" in devices:
+      if board in devices:
           logging.info("Found UART.")
           return 0
       elif devices:
@@ -322,6 +329,7 @@ def check_uart_connection(board):
       else:
           logging.error("NO UART port found.")
           return 1
+    # WINDOWS  
     elif board.startswith('rfc2217'):
       try:
           ser = serial.serial_for_url(board, timeout=1)
@@ -330,7 +338,20 @@ def check_uart_connection(board):
           return 0
       except serial.SerialException as e:
           logging.error(f"NO RFC2217 UART port found: {e}")
-          return 1  
+          return 1 
+    # MAC
+    elif board.startswith('/dev/cu.usb'):
+      devices = glob.glob('/dev/cu.usb*')
+      logging.debug(f"Found devices: {devices}")
+      if board in devices:
+          logging.info("Found UART.")
+          return 0
+      elif devices:
+          logging.error("Other UART devices found (Is the name OK?).")
+          return 0
+      else:
+          logging.error("NO UART port found.")
+          return 1   
     
 def check_jtag_connection():
     """ Checks JTAG devices """
@@ -443,7 +464,6 @@ def kill_all_processes(process_name):
         logging.error(f"Ocurrió un error inesperado: {e}")
         return 1
 
-    
 # (4.3) OpenOCD Function
 def start_openocd_thread(req_data):
     target_board = req_data['target_board']
@@ -462,6 +482,7 @@ def start_openocd_thread(req_data):
         req_data['status'] += f"Error starting OpenOCD: {str(e)}\n"
         logging.error(f"Error starting OpenOCD: {str(e)}")
         return None
+
 # (4.4) GDBGUI function    
 def start_gdbgui(req_data):
     target_device      = req_data['target_port']
@@ -504,8 +525,111 @@ def start_gdbgui(req_data):
     req_data['status'] += f"Finished debug session: {e}\n"
     return jsonify(req_data)
           
+# (4.5) Check environment (docker or native)
+def running_in_docker():
+    try:
+        with open('/proc/1/cgroup', 'rt') as f:
+            content = f.read()
+            if 'docker' in content or 'kubepods' in content or 'containerd' in content:
+                return True
+    except Exception:
+        pass
+
+    try:
+        with open('/.dockerenv', 'rt'):
+            return True
+    except Exception:
+        pass
+
+    return False
+
+# (4.6) Remote debug
+def openocd_alive(host='localhost', port=4444, timeout=1):
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        return False
+    except Exception as e:
+        print(f"Error inesperado: {e}")
+        return False
+    
+
+def start_gdbgui_remote(req_data):
+    target_device      = req_data['target_port']
+    route = os.path.join(BUILD_PATH, 'gdbinit')
+    if not (os.path.exists(route) and os.path.exists("./gbdscript_windows.gdb")):
+        logging.error(f"GDB route: {route} or gbdscript_windows.gdb does not exist.")
+        req_data['status'] += f"GDB route: {route} or gbdscript_windows.gdb does not exist.\n"
+        return jsonify(req_data)
+
+    logging.info("Starting GDBGUI remote...")
+    req_data['status'] = ''
+    
+
+    gdbgui_cmd = [
+        'gdbgui',
+        '-g', 'riscv32-esp-elf-gdb build/hello_world.elf -x gdbinit_win',
+        '--host', '0.0.0.0',
+        '--port', '5000',
+        '--no-browser'
+    ]
+    idf_cmd = [
+        'idf.py',
+        '-p', target_device ,
+        'monitor'
+    ]
+
+    try:
+        # Lanzar gdbgui en background
+        process_holder['gdbgui'] = subprocess.Popen(
+            gdbgui_cmd,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            text=True
+        )
+        logging.info("gdbgui started, PID: %d", process_holder['gdbgui'].pid)
+
+        # Ejecutar idf.py monitor y esperar a que termine
+        idf_proc = subprocess.run(
+            idf_cmd,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            text=True
+        )
+
+        if idf_proc.returncode != 0:
+            logging.error(f"idf.py monitor failed with return code {idf_proc.returncode}")
+            req_data['status'] += f"idf.py monitor failed with return code {idf_proc.returncode}\n"
+        else:
+            logging.info("idf.py monitor finished successfully.")
+
+    except subprocess.CalledProcessError as e:
+        logging.error("Failed to start process: %s", e)
+        req_data['status'] += f"Error starting process (code {e.returncode}): {e.stderr}\n"
+        return jsonify(req_data)
+    except Exception as e:
+        logging.error("Unexpected error: %s", e)
+        req_data['status'] += f"Unexpected error: {e}\n"
+        return jsonify(req_data)
+
+    req_data['status'] += "Debug session finished.\n"
+    return jsonify(req_data)
 
 
+def openocd_shutdown(host='localhost', port=4444):
+    try:
+        with socket.create_connection((host, port), timeout=1) as s:
+            s.sendall(b"shutdown\n")
+        return True
+
+    except Exception as e:
+        logging.error(f"OpenOCD not closed correctly: {e}")
+        return False
+
+
+   
+# (4.7) Main debug function
 def do_debug_request(request):
     global stop_event
     global process_holder
@@ -514,16 +638,33 @@ def do_debug_request(request):
         req_data = request.get_json()
         target_device = req_data['target_port']
         req_data['status'] = ''
-        # Check .elf files in BUILD_PATH
+        # (1.)Check .elf files in BUILD_PATH
         route = BUILD_PATH +'/build'
         logging.debug(f"Checking for ELF files in {route}")
-        elf_files = [f for f in os.listdir(route) if f.endswith(".elf")]
-        if not elf_files:
+        if os.path.isdir(route) and os.listdir(route) is False:
             req_data['status'] += "No ELF file found in build directory.\n"
             logging.error("No ELF file found in build directory.")
             return jsonify(req_data)
         logging.debug("Delete previous work")
+        # (2) Check environment
+
+        if running_in_docker() == True:
+            logging.info("Running inside Docker.")
+            # Check UART
+            if  check_uart_connection(target_device) != 0:
+                req_data['status'] += f"No UART found\n"
+                return jsonify(req_data)    
+            # Check if Openocd  is connected in host
+            if not openocd_alive('host.docker.internal', 4444):
+                req_data['status'] += "OpenOCD not found in host."
+                logging.error("OpenOCD not found in host.")
+                return jsonify(req_data)
+            logging.info("OpenOCD running in host.")
+            # Start gdbgui remote
+            start_gdbgui_remote(req_data)
+            return jsonify(req_data)
         # Clean previous debug system
+
         if error == 0:
             if 'openocd' in process_holder:
                 logging.debug('Killing OpenOCD')
@@ -561,6 +702,48 @@ def do_debug_request(request):
     return jsonify(req_data)
 
 
+# (5) Flasing assembly program into target board
+def do_job_request(request):
+  try:
+    req_data = request.get_json()
+    target_device      = req_data['target_port']
+    target_board       = req_data['target_board']
+    asm_code           = req_data['assembly']
+    req_data['status'] = ''
+
+    # create temporal assembly file
+    text_file = open("tmp_assembly.s", "w")
+    ret = text_file.write(asm_code)
+    text_file.close()
+
+    # transform th temporal assembly file
+    error = creator_build('tmp_assembly.s', "main/program.s");
+    if error != 0:
+        req_data['status'] += 'Error adapting assembly file...\n'
+
+    # flashing steps...
+    if error == 0:
+      error = do_cmd_output(req_data, ['idf.py',  'fullclean'])
+    if error == 0:
+      error = do_cmd_output(req_data, ['idf.py',  'set-target', target_board])
+    if error == 0:
+      error = do_cmd_output(req_data, ['idf.py', 'build'])
+    if error == 0:
+      error = do_cmd_output(req_data, ['idf.py', '-p', target_device, 'flash'])
+    if error == 0:
+      error = do_cmd_output(req_data, ['./gateway_monitor.sh', target_device, '50'])
+      error = do_cmd_output(req_data, ['cat', 'monitor_output.txt'])
+      error = do_cmd_output(req_data, ['rm', 'monitor_output.txt'])
+
+  except Exception as e:
+    req_data['status'] += str(e) + '\n'
+
+  return jsonify(req_data)
+
+
+
+
+
 # Setup flask and cors:
 app  = Flask(__name__)
 cors = CORS(app)
@@ -589,7 +772,6 @@ def post_flash():
 def post_monitor():
   return do_monitor_request(request)
 
-
 # (4) POST /fullclean -> clean build directory
 @app.route("/fullclean", methods=["POST"])
 @cross_origin()
@@ -613,6 +795,12 @@ def post_debug():
 @cross_origin()
 def post_stop_monitor():
   return do_stop_monitor_request(request)
+
+# (8) POST /job -> flash + monitor
+@app.route("/job", methods=["POST"])
+@cross_origin()
+def post_job():
+  return do_job_request(request)
 
 
 # Run

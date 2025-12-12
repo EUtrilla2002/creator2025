@@ -296,6 +296,19 @@
                         //Google Analytics
                         creator_ga('simulator', 'simulator.download_driver', 'simulator.download_driver');
                       },
+                      download_scripts()
+                      {
+                        var link = document.createElement("a");
+                        link.download = "openocd.zip";
+                        link.href = (window.location.href.split('?')[0]).split('#')[0] + "/gateway/" + "openocd_scripts.zip";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        delete link;
+
+                        //Google Analytics
+                        creator_ga('simulator', 'simulator.download_openocd', 'simulator.download_openocd');
+                      },
                      do_flash( )
                       {
                         this.save();
@@ -782,7 +795,7 @@
                     '                       <b-row no-gutters>' +
                     '                         <b-col md="12">' +
                     '                           <b-card-text style="text-align: left;margin:2%;">' +
-                    '                             <code>docker run --init -it --device=&lt;target_port&gt; -p 8080:8080 --name creator_gateway creatorsim/creator_gateway /bin/bash</code>' +
+                    '                             <code>docker run --init -it --device=&lt;target_port&gt; --add-host=host.docker.internal:host-gateway -p 8080:8080 -p 5000:5000 --name creator_gateway creatorsim/creator_gateway /bin/bash</code>' +
                     '                           </b-card-text>' +
                     '                         </b-col>' +
                     '                       </b-row>' +
@@ -1072,6 +1085,106 @@
                     '           </b-tabs>' +
                     '         </b-tab>' +
                     ' ' +
+                    '             <b-tab title="Debug">' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(2) Start the environment of your choice</label>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(3) Connect your JTAG device</label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                           <b-card-text style="text-align: left;margin:2%;">' +
+                    '                             <span>Checkout how works debugging in your board: <a href="https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/jtag-debugging/configure-builtin-jtag.html" target="_blank">https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/api-guides/jtag-debugging/configure-builtin-jtag.html</a></span>' +
+
+                    '                           </b-card-text>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(4) Install OpenOCD (not necesary in Native environment):</label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                           <b-card-text style="text-align: left;margin:2%;">' +
+                    '                             <span>Install the correct openocd distribution: <a href="https://github.com/espressif/openocd-esp32/releases/tag/v0.12.0-esp32-20241016" target="_blank">https://github.com/espressif/openocd-esp32/releases/tag/v0.12.0-esp32-20241016</a></span>' +
+                    '                           </b-card-text>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(5) Download openocd scripts</label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                          <b-button class="btn btn-sm btn-block" variant="outline-primary" @click="download_scripts"><span class="fas fa-download"></span> Download Scripts</b-button>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(6) Run openocd_start script:</label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                           <b-card-text style="text-align: left;margin:2%;">' +
+                    '                             <code> ./openocd_start.sh esp32c3 </code>' +
+                    '                           </b-card-text>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    ' ' +
+                    '               <b-container fluid align-h="center" class="mx-0 px-0">' +
+                    '                 <b-row cols="1" align-h="center">' +
+                    '                   <b-col class="pt-2">' +
+                    '                     <label for="range-6">(7) Open where Debug UI will be placed, as Docker can not open pages in host:</label>' +
+                    '                     <b-card class="text-center">' +
+                    '                       <b-row no-gutters>' +
+                    '                         <b-col md="12">' +
+                    '                           <b-card-text style="text-align: left;margin:2%;">' +
+                    '                             <a href="http://localhost:5000/" target="_blank">http://localhost:5000/</a>' +
+                    '                           </b-card-text>' +
+                    '                         </b-col>' +
+                    '                       </b-row>' +
+                    '                     </b-card>' +
+                    '                   </b-col>' +
+                    '                 </b-row>' +
+                    '               </b-container>' +
+                    '             </b-tab>' +
+                    ' ' +
+                    
+                    
+
+
+
+                    //Run
                     '         <b-tab title="Run" active>' +
                     '           <b-container fluid align-h="center" class="mx-0 px-0">' +
                     '             <b-row cols="1" align-h="center">' +
